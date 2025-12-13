@@ -1,5 +1,13 @@
-from typing import List
+from typing import List, Tuple
 from collections import defaultdict
+from heapq import heappush_max, heappop_max
+from copy import deepcopy
+from pprint import pprint
+
+N_POINTS = 1000
+
+def euclidean_distance(point1: Tuple[int, int, int], point2: Tuple[int, int, int]):
+    return ((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2 + (point1[2] - point2[2]) ** 2) ** 0.5
 
 class UnionFind:
     def __init__(self, n):
@@ -23,25 +31,80 @@ class UnionFind:
                 self.parent[root_y] = root_x
                 self.rank[root_x] += 1
 
+class Node:
+    def __init__(self, point: Tuple[int, int, int], left: 'Node', right: 'Node', axis: int):
+        self.point = point
+        self.left = left
+        self.right = right
+        self.axis = axis
+
+class KDTree:
+    def __init__(self, points: List[Tuple[int, int, int]]):
+        self.points = points
+        self.n_dim = len(points[0])
+        self.root = self.build(points, 0)
+
+    def build(self, points: List[Tuple[int, int, int]], depth: int):
+        if not points:
+            return None
+        points.sort(key=lambda x: x[depth])
+        mid = len(points) // 2
+        next_depth = (depth + 1) % self.n_dim
+        return Node(points[mid], self.build(points[:mid], next_depth), self.build(points[mid+1:], next_depth), depth)
+
+    def query(self, point: Tuple[int, int, int], k: int):
+        heap = []
+
+        def search(node: Node, depth: int):
+            if node is None:
+                return
+            dist = euclidean_distance(point, node.point)
+            if len(heap) < k:
+                heappush_max(heap, (dist, node.point))
+            else:
+                # we need to kick out the highest distance point
+                if dist < heap[0][0]:
+                    heappop_max(heap)
+                    heappush_max(heap, (dist, node.point))
+            if point[node.axis] < node.point[node.axis]:    
+                search(node.left, (depth + 1) % self.n_dim)
+                # but you will need to search other side too, splitting by ONE axis, doesn't guarantee that the closest points are on that side
+                if len(heap) < k or abs(point[node.axis] - node.point[node.axis]) < heap[0][0]:
+                    search(node.right, (depth + 1) % self.n_dim)
+            else:
+                search(node.right, (depth + 1) % self.n_dim)
+                if len(heap) < k or abs(point[node.axis] - node.point[node.axis]) < heap[0][0]:
+                    search(node.left, (depth + 1) % self.n_dim)
+
+        search(self.root, 0)
+        return heap # exactly k elements [distance, point]
+
+
 def solve(data: List[str]):
+
+    data = [[int(y) for y in x.split(",")] for x in data]
+
+    tree = KDTree(deepcopy(data))
+
+    point2idx = {tuple(point): i for i, point in enumerate(data)}
+
+    # maintain a min heap of distances
+    distances = []
+    seen = set()
+    for i in range(len(data)):
+        points = tree.query(data[i], 15)
+        for distance, point in points:
+            if distance < 1e-6: continue # don't include itself
+            j = point2idx[tuple(point)]
+            if (j, i) in seen: continue
+            seen.add((i, j))
+            heappush_max(distances, (distance, i, j))
+            if len(distances) > N_POINTS:
+                heappop_max(distances)
 
     uf = UnionFind(len(data))
 
-    # preprocess distances
-    distances = []
-    for i in range(len(data)):
-        for j in range(i+1, len(data)):
-            xi, yi, zi = data[i].split(",")
-            xi, yi, zi = int(xi), int(yi), int(zi)
-            xj, yj, zj = data[j].split(",")
-            xj, yj, zj = int(xj), int(yj), int(zj)
-            # euclidean distance
-            distance = ((xi - xj) ** 2 + (yi - yj) ** 2 + (zi - zj) ** 2) ** 0.5
-            distances.append((i, j, distance))
-
-    distances.sort(key=lambda x: x[2])
-
-    for i, j, distance in distances[:1000]:
+    for distance, i, j in distances:
         if uf.find(i) != uf.find(j):
             uf.union(i, j)
 
