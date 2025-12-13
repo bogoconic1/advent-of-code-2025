@@ -3,14 +3,13 @@ from typing import List
 def solve(batteries: List[str]):
     ans = 0
     for battery in batteries:
-        dp = [0]*12
+        dp = [0]*2
         for char in battery:
             digit = int(char)
-            for i in range(11, 0, -1):
-                dp[i] = max(dp[i], dp[i-1] * 10 + digit)
+            dp[1] = max(dp[1], dp[0] * 10 + digit)
             dp[0] = max(dp[0], digit)
 
-        ans += dp[11]
+        ans += dp[1]
             
     print(ans)
 
