@@ -26,6 +26,7 @@ class UnionFind:
 def solve(data: List[str]):
 
     uf = UnionFind(len(data))
+    num_components = len(data)
 
     # preprocess distances
     distances = []
@@ -40,12 +41,14 @@ def solve(data: List[str]):
             distances.append((i, j, distance))
 
     distances.sort(key=lambda x: x[2])
-    last_value = 0
 
     for i, j, distance in distances:
         if uf.find(i) != uf.find(j):
             uf.union(i, j)
-            last_value = int(data[i].split(",")[0]) * int(data[j].split(",")[0])
+            num_components -= 1
+            if num_components == 1:
+                last_value = int(data[i].split(",")[0]) * int(data[j].split(",")[0])
+                break
 
     print(last_value)
 
