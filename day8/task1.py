@@ -5,6 +5,7 @@ from copy import deepcopy
 from pprint import pprint
 
 N_POINTS = 1000
+N_NEIGHBORS_PER_POINT = 15
 
 def euclidean_distance(point1: Tuple[int, int, int], point2: Tuple[int, int, int]):
     return ((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2 + (point1[2] - point2[2]) ** 2) ** 0.5
@@ -66,15 +67,14 @@ class KDTree:
                 if dist < heap[0][0]:
                     heappop_max(heap)
                     heappush_max(heap, (dist, node.point))
-            if point[node.axis] < node.point[node.axis]:    
-                search(node.left, (depth + 1) % self.n_dim)
-                # but you will need to search other side too, splitting by ONE axis, doesn't guarantee that the closest points are on that side
-                if len(heap) < k or abs(point[node.axis] - node.point[node.axis]) < heap[0][0]:
-                    search(node.right, (depth + 1) % self.n_dim)
+            
+            if point[node.axis] < node.point[node.axis]: 
+                first, second = node.left, node.right
             else:
-                search(node.right, (depth + 1) % self.n_dim)
-                if len(heap) < k or abs(point[node.axis] - node.point[node.axis]) < heap[0][0]:
-                    search(node.left, (depth + 1) % self.n_dim)
+                first, second = node.right, node.left
+            search(first, (depth + 1) % self.n_dim)
+            if len(heap) < k or abs(point[node.axis] - node.point[node.axis]) < heap[0][0]:
+                search(second, (depth + 1) % self.n_dim)
 
         search(self.root, 0)
         return heap # exactly k elements [distance, point]
@@ -88,11 +88,11 @@ def solve(data: List[str]):
 
     point2idx = {tuple(point): i for i, point in enumerate(data)}
 
-    # maintain a min heap of distances
+    # maintain a max heap of distances
     distances = []
     seen = set()
     for i in range(len(data)):
-        points = tree.query(data[i], 15)
+        points = tree.query(data[i], N_NEIGHBORS_PER_POINT)
         for distance, point in points:
             if distance < 1e-6: continue # don't include itself
             j = point2idx[tuple(point)]
