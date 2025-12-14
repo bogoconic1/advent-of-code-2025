@@ -5,7 +5,7 @@ from copy import deepcopy
 from pprint import pprint
 
 N_POINTS = 1000
-N_NEIGHBORS_PER_POINT = 15
+N_NEIGHBORS_PER_POINT = 6
 
 def euclidean_distance(point1: Tuple[int, int, int], point2: Tuple[int, int, int]):
     return ((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2 + (point1[2] - point2[2]) ** 2) ** 0.5
